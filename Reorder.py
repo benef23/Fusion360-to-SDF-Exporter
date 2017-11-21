@@ -6,7 +6,16 @@ import xml.etree.ElementTree as ET
 import math
 import xml.dom.minidom as DOM
 import os
+global position
+global ui
+import tkinter
+from tkinter.filedialog import askdirectory
 
+ui = None
+app = adsk.core.Application.get()
+ui  = app.userInterface
+
+position = 0
 ## @package SDFusion
 # This is an exporter for Autodesk Fusion 360 models to SDFormat.
 #
@@ -22,9 +31,17 @@ design = None
 
 ## Global variable to make the output file directory accessible for
 # every function.
-fileDir = "C:/Users/Usuario/Desktop/Legs"
-if not os.path.exists(fileDir):
-    os.makedirs(fileDir)
+ui.messageBox('Please insert a destination address')        
+root = tkinter.Tk()
+root.withdraw()
+root.update()
+fileDir = askdirectory()
+root.destroy()
+print(fileDir)
+
+#fileDir = "C:/Users/Usuario/Desktop/Legs"
+#if not os.path.exists(fileDir):
+#    os.makedirs(fileDir)
 
 ## Global variable to make the robot model name accessible for
 # every function.
@@ -165,11 +182,16 @@ def sdfInertia(physics):
 # @param lin the link to be exported
 # @return the SDF link node
 def linkSDF(lin):
+    global position
     linkName = lin.component.name
     link = ET.Element("link", name=linkName)
     # build pose node
     matrix = gazeboMatrix(lin.transform)
-    pose = sdfPoseMatrix(matrix)
+    pose = sdfPoseMatrix(matrix)    
+    #if position == 0:
+    #    pose = sdfPoseMatrix(matrix)
+    #elif position != 0:
+    #    pose = position    
     link.append(pose)
     # get physical properties of occurrence
     physics = lin.physicalProperties
@@ -209,6 +231,7 @@ def linkSDF(lin):
 # @param name_child the name of the child link
 # @return the SDF joint node
 def jointSDF(joi, name_parent, name_child):
+    global position
     jointInfo = []
     jointType = ""
     jType = joi.jointMotion.jointType
@@ -244,6 +267,7 @@ def jointSDF(joi, name_parent, name_child):
     joint.append(child)
     # build pose node
     pose = sdfPoseVector(joi.geometryOrOriginOne.origin)
+    position =  pose
     joint.append(pose)
     joint.extend(jointInfo)
     return joint
@@ -278,10 +302,6 @@ def revoluteJoint(joi):
     upper = ET.Element("upper")
     upper.text = str(-mini)
     limit.append(upper)
-    # build frame node
-    frame = ET.Element("use_parent_model_frame")
-    frame.text = "0"
-    axis.append(frame)
     info.append(axis)
     return info
     
@@ -366,6 +386,7 @@ def export_next(parent_name, terminate):
     global model
     global allRigidGroups
     global allComponents
+    global position
 
     compareJoint = 'empty'
     if compareJoint not in jointsList:
@@ -409,7 +430,8 @@ def export_next(parent_name, terminate):
                                 terminate = 1
                             print('Parent component is: ', parent_name)
                             print("export joint: ", joi.name)
-                            joint = jointSDF(joi, link_parent, link_child)
+                            joint = jointSDF(joi, link_child, link_parent)
+                            print("pos: ", position.text)
                             model.append(joint)
                             jointsList.append(joi.name)
                             compareJoint = joi.name
@@ -432,6 +454,12 @@ def export_next(parent_name, terminate):
                                 elif rig.name == link_parent and rig.name != parent_name:
                                    # jointsList.append(link_child)
                                     #export_next(link_child, linksList)
+                                
+                                    ## MOVE RIGID GROUP
+                                
+                                    # ROTATE RIGID GROUP
+                                
+                                
                                     linkOcc = rigidGroupToSTL(rig)    
                                     link = linkSDF(linkOcc)
                                     model.append(link)                          
@@ -447,11 +475,7 @@ def export_next(parent_name, terminate):
                                     
 ## Exports a robot model from Fusion 360 to SDFormat.
 def run(context):
-    global ui
-    ui = None
     try:
-        app = adsk.core.Application.get()
-        ui  = app.userInterface
         # get active design   
         global product
         product = app.activeProduct
@@ -500,6 +524,8 @@ def run(context):
         global jointsList 
         jointsList = []
         global terminate
+        global position
+        position = 0
         terminate = 0
         export_next(parent_name, terminate)
         
