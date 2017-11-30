@@ -241,8 +241,8 @@ def jointSDF(joi, name_parent, name_child):
         jointInfo = revoluteJoint(joi)
         jointType = "revolute"
     elif jType == 2:
-        # not implemented
-        jointType = ""
+        jointInfo = sliderJoint(joi)
+        jointType = "prismatic"
     elif jType == 3:
         # not implemented
         jointType = ""
@@ -254,7 +254,10 @@ def jointSDF(joi, name_parent, name_child):
         jointType = ""
     elif jType == 6:
         # SDFormat does not implement ball joint limits
+        #jointInfo = ballJoint(joi)
         jointType = "ball"
+        jointInfo = ballJoint(joi)
+    print("Joint type:", jointType)
     name = joi.name
     joint = ET.Element("joint", name=name, type=jointType)
     # build parent node
@@ -279,6 +282,32 @@ def jointSDF(joi, name_parent, name_child):
 # @param joi one revolute joint object
 # @return a list of information nodes (here one axis node)
 # for the revolute joint
+def sliderJoint(joi):
+    info = []
+    # build axis node
+    axis = ET.Element("axis")
+    xyz = ET.Element("xyz")    
+    vector = joi.jointMotion.slideDirectionVector
+    xyz.text = vectorToString(vector.x, vector.y, vector.z)
+    axis.append(xyz)
+    # build limit node
+    mini = joi.jointMotion.slideLimits.minimumValue
+    maxi = joi.jointMotion.slideLimits.maximumValue
+    limit = ET.Element("limit")
+    axis.append(limit)
+    # Lower and upper limit have to be switched and inverted,
+    # because Fusion 360 moves the parent link wrt to the
+    # child link and Gazebo moves the child link wrt to the
+    # parent link.
+    lower = ET.Element("lower")
+    lower.text = str(-maxi)
+    limit.append(lower)
+    upper = ET.Element("upper")
+    upper.text = str(-mini)
+    limit.append(upper)
+    info.append(axis)
+    return info
+
 def revoluteJoint(joi):
     info = []
     # build axis node
@@ -303,6 +332,80 @@ def revoluteJoint(joi):
     upper.text = str(-mini)
     limit.append(upper)
     info.append(axis)
+    return info
+
+def ballJoint(joi):
+    info = []
+    
+#build yaw-axis node
+    axis = ET.Element("axis")
+    xyz = ET.Element("xyz")    
+    vector = joi.jointMotion.yawDirectionVector
+    xyz.text = vectorToString(vector.x, vector.y, vector.z)
+    axis.append(xyz)
+    # build limit node
+    mini = joi.jointMotion.yawLimits.minimumValue
+    maxi = joi.jointMotion.yawLimits.maximumValue
+    limit = ET.Element("limit")
+    axis.append(limit)
+    # Lower and upper limit have to be switched and inverted,
+    # because Fusion 360 moves the parent link wrt to the
+    # child link and Gazebo moves the child link wrt to the
+    # parent link.
+    lower = ET.Element("lower")
+    lower.text = str(-maxi)
+    limit.append(lower)
+    upper = ET.Element("upper")
+    upper.text = str(-mini)
+    limit.append(upper)
+    info.append(axis)
+
+# build pitch-axis node
+    axis = ET.Element("axis")
+    xyz = ET.Element("xyz")    
+    vector = joi.jointMotion.pitchDirectionVector
+    xyz.text = vectorToString(vector.x, vector.y, vector.z)
+    axis.append(xyz)
+    # build limit node
+    mini = joi.jointMotion.pitchLimits.minimumValue
+    maxi = joi.jointMotion.pitchLimits.maximumValue
+    limit = ET.Element("limit")
+    axis.append(limit)
+    # Lower and upper limit have to be switched and inverted,
+    # because Fusion 360 moves the parent link wrt to the
+    # child link and Gazebo moves the child link wrt to the
+    # parent link.
+    lower = ET.Element("lower")
+    lower.text = str(-maxi)
+    limit.append(lower)
+    upper = ET.Element("upper")
+    upper.text = str(-mini)
+    limit.append(upper)
+    info.append(axis)
+
+#build roll-axis node
+    axis = ET.Element("axis")
+    xyz = ET.Element("xyz")    
+    vector = joi.jointMotion.rollDirectionVector
+    xyz.text = vectorToString(vector.x, vector.y, vector.z)
+    axis.append(xyz)
+    # build limit node
+    mini = joi.jointMotion.rollLimits.minimumValue
+    maxi = joi.jointMotion.rollLimits.maximumValue
+    limit = ET.Element("limit")
+    axis.append(limit)
+    # Lower and upper limit have to be switched and inverted,
+    # because Fusion 360 moves the parent link wrt to the
+    # child link and Gazebo moves the child link wrt to the
+    # parent link.
+    lower = ET.Element("lower")
+    lower.text = str(-maxi)
+    limit.append(lower)
+    upper = ET.Element("upper")
+    upper.text = str(-mini)
+    limit.append(upper)
+    info.append(axis)
+    
     return info
     
 ## Plain STL export.
